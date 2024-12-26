@@ -1,4 +1,6 @@
 import random
+
+import numpy as np
 import pygame
 
 def getProp(prop):
@@ -56,10 +58,10 @@ def colors():
 
     return colorsMap
 
-def darker_colors():
-    return [colors()[col] for col in colors().keys() if is_color_dark(colors()[col])]
-def ligther_colors():
-    return [colors()[col] for col in colors().keys() if not is_color_dark(colors()[col])]
+def darker_colors(fromColors):
+    return [fromColors[col] for col in fromColors.keys() if is_color_dark(fromColors[col])]
+def ligther_colors(fromColors):
+    return [fromColors[col] for col in fromColors.keys() if not is_color_dark(fromColors[col])]
 
 def randomItemFrom(someList):
     return random.choice(list(someList))
@@ -106,3 +108,14 @@ def is_color_dark(hex_color: str) -> bool:
 
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return luminance < 0.5
+
+def level1_colors():
+
+    allCols = colors()
+    allCols.pop('background')
+    choose_sum = random.choices(list(allCols.keys()), k=4)
+    print(f"Chose some colors> {choose_sum}")
+    return {col:allCols[col] for col in choose_sum}
+
+def colorForLevel (lvlIndex):
+    return level1_colors() if lvlIndex == 1 else colors()

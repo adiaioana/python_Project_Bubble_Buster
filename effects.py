@@ -1,6 +1,7 @@
 import math
 import pygame
 
+from game_elements import Bubble
 from small_math import get_line_end
 from styles import getProp, randomItemFrom, darker_colors, colors
 
@@ -50,27 +51,36 @@ class Score:
 
     def update(self, deletelist):
         self.score += len(deletelist) * 15
-        self.render = self.font.render('Score: ' + str(self.score), True, randomItemFrom(darker_colors()), colors()['white'])
+        self.render = self.font.render('Score: ' + str(self.score), True, randomItemFrom(darker_colors(colors())), colors()['white'])
 
     def draw(self, window):
         window.blit(self.render, self.rect)
 
 class Shooter:
     def __init__(self):
-        self.dot_length=5
+        self.dot_length=60
         self.gap_length=3
         self.angle = 90
         self.position = (getProp('window-width') // 2, getProp('window-height') - 50)
-
+    def set_bubble(self, Bub):
+        self.bubble = Bub
+        self.bubble.set_coord(self.position[0], self.position[1])
 
     def draw(self, window):
         """Draw the shooter as a dotted line."""
-        end_x , end_y = get_line_end(200, self.angle, self.position)
+        end_x , end_y = get_line_end(400, self.angle, self.position)
         draw_dotted_line(window, self.position, (end_x, end_y), colors()['red'], dot_length=10, gap_length=5)
+        self.bubble.draw(window)
+
 
     def update_angle(self, mousex, mousey):
         dx = mousex - self.position[0]
         dy = self.position[1] - mousey
         shooter_angle = math.degrees(math.atan2(dy, dx))
-
         self.angle = max(0, min(180, shooter_angle))
+
+    def shoot(self):
+        # Convert the angle to a unit vector
+        dx = math.cos(math.radians(self.angle))
+        dy = -math.sin(math.radians(self.angle))  # Negative because screen y-coordinates are inverted
+        return dx, dy

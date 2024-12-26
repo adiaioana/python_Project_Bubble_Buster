@@ -6,10 +6,11 @@ from effects import Score, Shooter, initialize_window
 if __name__ == "__main__":
     window, clock = initialize_window(getProp('window-width'), getProp('window-height'), "Bubble Buster")
 
-    gameboard = Gameboard()
+    gameboard = Gameboard( 1 ) # level 1
     running = True
     first_text = Score(20)
     shooter = Shooter()
+    shooter.set_bubble(gameboard.bubbles_queue.pop(0))
 
     while running:
 
@@ -17,8 +18,8 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                #mouse click = shoot
-
+                shooter.update_angle(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
+                gameboard.use_shooter(shooter, window)
 
         shooter.update_angle(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
         draw_background(window)

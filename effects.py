@@ -58,29 +58,73 @@ class Score:
 
 class Shooter:
     def __init__(self):
-        self.dot_length=60
-        self.gap_length=3
+        self.dot_length = 60
+        self.gap_length = 3
         self.angle = 90
         self.position = (getProp('window-width') // 2, getProp('window-height') - 50)
+
     def set_bubble(self, Bub):
         self.bubble = Bub
         self.bubble.set_coord(self.position[0], self.position[1])
 
     def draw(self, window):
         """Draw the shooter as a dotted line."""
-        end_x , end_y = get_line_end(400, self.angle, self.position)
-        draw_dotted_line(window, self.position, (end_x, end_y), colors()['red'], dot_length=10, gap_length=5)
-        self.bubble.draw(window)
-
+        trajectory_points = self.calculate_reflection_path(500)
+        for start, end in zip(trajectory_points, trajectory_points[1:]):
+            draw_dotted_line(window, start, end, colors()['red'], dot_length=10, gap_length=5)
+        if self.bubble:  # Only draw the bubble if it exists
+            self.bubble.draw(window)
 
     def update_angle(self, mousex, mousey):
         dx = mousex - self.position[0]
         dy = self.position[1] - mousey
-        shooter_angle = math.degrees(math.atan2(dy, dx))
-        self.angle = max(0, min(180, shooter_angle))
+        self.angle = max(0, min(180, math.degrees(math.atan2(dy, dx))))
 
     def shoot(self):
         # Convert the angle to a unit vector
         dx = math.cos(math.radians(self.angle))
         dy = -math.sin(math.radians(self.angle))  # Negative because screen y-coordinates are inverted
         return dx, dy
+
+    def calculate_reflection_path(self, max_length):
+        WINDOW_WIDTH = getProp('window-width')
+        """Calculate the path of the line with reflections."""
+        points = [self.position]
+        dx, dy = self.shoot()
+        x, y = self.position
+        remaining_length = max_length
+
+        while remaining_length > 0:
+            if dx > 0:  # Moving right
+                t_x = (WINDOW_WIDTH - x) / dx
+            elif dx < 0:  # Moving left
+                t_x = -x / dx
+            else:  # Vertical line, no horizontal movement
+                t_x = float('inf')
+
+            t_y = remaining_length / math.sqrt(dx ** 2 + dy ** 2)
+
+            # Choose the shortest time to collision with a wall
+            t = min(t_x, t_y)
+
+            # Compute the endpoint
+            end_x = x + t * dx
+            end_y = y + t * dy
+
+            # If hitting a vertical wall
+            if t == t_x:
+                dx = -dx  # Reflect horizontally
+                end_x = max(0, min(WINDOW_WIDTH, end_x))  # Ensure it stays in bounds
+
+            # Append the endpoint
+            points.append((end_x, end_y))
+
+            # Update position and remaining length
+            x, y = end_x, end_y
+            remaining_length -= t * math.sqrt(dx ** 2 + dy ** 2)
+
+            # Break if we reach the top boundary
+            if y <= 0:
+                break
+
+        return points

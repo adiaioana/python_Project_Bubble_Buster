@@ -19,7 +19,9 @@ if __name__ == "__main__":
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 shooter.update_angle(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
-                gameboard.use_shooter(shooter, window)
+                gameboard.use_shooter(shooter, window, first_text)
+                shooter = Shooter()
+                shooter.set_bubble(gameboard.bubbles_queue.pop(0))
 
         shooter.update_angle(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
         draw_background(window)

@@ -137,4 +137,6 @@ def game_over_screen(window, clock):
                     exit()
 
                 elif event.key == pygame.K_r:  # Press R to restart
-                    return True  # Return True to restart the game
+                    return 'restart'  # Return 'restart' to indicate restart
+
+    return 'quit'  # Default return value in case of quit event

@@ -61,7 +61,7 @@ class Shooter:
         self.dot_length = 60
         self.gap_length = 3
         self.angle = 90
-        self.position = (getProp('window-width') // 2, getProp('window-height') - 50)
+        self.position = (getProp('window-width') // 2, getProp('window-height') - 100)
 
     def set_bubble(self, Bub):
         self.bubble = Bub

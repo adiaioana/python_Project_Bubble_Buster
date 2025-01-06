@@ -37,6 +37,7 @@ class Bubble:
         pygame.draw.circle(window, self.outline, center, self.radius )
         pygame.draw.circle(window, self.fillcolor, center, self.radius - self.outline_width)
 
+
 class Gameboard:
     def __init__(self, lvlCount):
         self.height, self.width = bubble_window_size()
@@ -155,10 +156,37 @@ class Gameboard:
 
     def draw(self,window):
 
-        for x in range(0, self.width):
-            for y in range(0, self.height):
+        for x in range(self.width):
+            for y in range(self.height):
                 if not self.matrix[x][y].is_clear():
                     self.matrix[x][y].draw(window)
+        bubble_diam = styles.getGenProp('bubble-radius') * 2
+        pygame.draw.line(window, colors()['brown'], (0, bubble_diam * self.height + 15), (getProp('window-width'), bubble_diam * self.height + 15), 3)
+
+    def is_bubble_below_board(self, y_position):
+        return y_position >= self.height
+
+    def find_target_row(self, col, dx, dy):
+        """
+        Find the last free row in the specified column (col) along the trajectory
+        defined by dx and dy. Returns the row index of the target cell.
+        """
+        # Starting position (the shooter's position)
+        x = self.width // 2  # Example, can be set to shooter's x position
+        y = 0  # Starting from the top row
+
+        while 0 <= x < self.width and 0 <= y < self.height:  # Iterate along the path
+            # If the bubble intersects with the current column (col)
+            if int(x) == col:
+                # Check if the current position is free
+                if self.matrix[col][int(y)].is_clear():
+                    return int(y+1)  # The first free row is the target position
+
+            # Move the bubble along the trajectory (adjust based on dx, dy)
+            x += dx * 5  # Move horizontally
+            y += dy * 5  # Move vertically
+
+        return int(y-1) # If no intersection occurs, return the last row
 
     def use_shooter(self, shooter, window, score):
         dx, dy = shooter.shoot()  # Direction vector of the bubble
@@ -169,48 +197,44 @@ class Gameboard:
         target_cell = None
 
         while not hit:
-            x += dx * 5  # Move the bubble along the trajectory
+            # Move the bubble along the trajectory (apply dx, dy)
+            x += dx * 5
             y += dy * 5
 
-            # Check for collision with the edges of the gameboard
-            if x < 0 or x > WINDOW_WIDTH:
+            # Check for collision with the edges of the gameboard (reflect off the edges)
+            if x <= 0:  # Left margin
+                x = 0  # Snap to the left edge
                 dx = -dx  # Reflect horizontally
-                x = max(0, min(WINDOW_WIDTH, x))  # Ensure x stays within bounds
-
-            # Check for collision with the top margin
-            if y <= 0:
+            elif x >= getProp('window-width'):  # Right margin
+                x = getProp('window-width')  # Snap to the right edge
+                dx = -dx  # Reflect horizontally
+            elif y <= 0:  # Top margin
                 y = 0  # Snap to the top margin
-                # Find the nearest empty cell in the top row
-                for j in range(self.height):
-                    if self.matrix[0][j].is_clear():
-                        bubble_x, bubble_y = self.matrix[0][j].xCoord, self.matrix[0][j].yCoord
-                        if abs(x - bubble_x) <= bubble_radius + bubble_outline:
-                            target_cell = (0, j)
-                            hit = True
-                            break
-                break  # Stop the loop if a top row position is found
+                target_cell = self.find_closest_free_top(x)  # Find first free spot
+                hit = True  # Bubble hit the top, find target position
 
-            dmin = 2 * bubble_radius + 2 * bubble_outline + 1
+            # If bubble reaches below the board's height, return True
+            elif y >= getProp('window-height'):
+                if self.is_bubble_below_board(y):
+                    return True  # Indicate that the bubble has fallen below the board
 
-            # Check for collision with existing bubbles on the gameboard
-            for i in range(self.width - 1, -1, -1):
-                for j in range(self.height):
-                    bubble_x, bubble_y = self.matrix[i][j].xCoord, self.matrix[i][j].yCoord
+                y = getProp('window-height')  # Snap to the bottom edge
+                target_cell = self.find_closest_free_top(x)
+                hit = True
 
-                    # If the current gameboard bubble is not clear
-                    if not self.matrix[i][j].is_clear():
-                        # Calculate the distance between the moving bubble and the gameboard bubble
-                        distance = math.sqrt((x - bubble_x) ** 2 + (y - bubble_y) ** 2)
-
-                        # If the moving bubble is close enough to this bubble, it hits
-                        if distance <= 2 * bubble_radius + 2 * bubble_outline:
-                            # Parse the neighbors of this bubble
-                            if distance < dmin:
+            # Check for collisions with other bubbles on the board
+            if not hit:
+                for i in range(self.width):
+                    for j in range(self.height):
+                        bubble_x, bubble_y = self.matrix[i][j].xCoord, self.matrix[i][j].yCoord
+                        if not self.matrix[i][j].is_clear():
+                            distance = math.sqrt((x - bubble_x) ** 2 + (y - bubble_y) ** 2)
+                            if distance <= 2 * bubble_radius + 2 * bubble_outline:
                                 target_cell = self.find_intersecting_neighbor(i, j, dx, dy, x, y)
-                                dmin = distance
-                            hit = True
-                            break
+                                hit = True
+                                break
 
+            # If the shot hasn't hit a target yet, continue moving the bubble
             if not hit:
                 shooter.bubble.set_coord(int(x), int(y))  # Update the bubble's position
                 shooter.bubble.draw(window)
@@ -218,10 +242,16 @@ class Gameboard:
             pygame.display.update()
             pygame.time.delay(10)
 
-        if hit and target_cell:
+        if hit:
+            # Set the target position if no intersection found
+            if target_cell is None:
+                target_cell = (0, 0) if dx < 0 else (0, self.width - 1)
+
             i, j = target_cell
             self.matrix[i][j].set_style(shooter.bubble.fillcolor, shooter.bubble.outline)
             self.update_after_hit(i, j, score)
+
+        return False  # Return False if the bubble is successfully shot
 
     def find_intersecting_neighbor(self, i, j, dx, dy, shooter_x, shooter_y):
         """
@@ -252,3 +282,26 @@ class Gameboard:
 
         # If no valid neighbor is found, return None
         return None
+
+    def find_closest_free_top(self, x):
+        """Find the closest free position in the top row based on the x-coordinate."""
+        closest_cell = None
+        min_distance = float("inf")
+
+        for j in range(self.height):
+            if self.matrix[0][j].is_clear():
+                bubble_x = self.matrix[0][j].xCoord
+                distance = abs(x - bubble_x)
+                if distance < min_distance:
+                    closest_cell = (0, j)
+                    min_distance = distance
+
+        return closest_cell
+    def is_empty(self):
+
+        for i in range(self.width):
+            for j in range(self.height):
+                if not self.matrix[i][j].is_clear():
+                    return False
+
+        return True

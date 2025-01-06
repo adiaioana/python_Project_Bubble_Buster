@@ -20,6 +20,7 @@ class Bubble:
         self.radius = styles.getGenProp('bubble-radius')
         self.xCoord = calculate_bubble_position(i, j)[0] + getProp('margin-left')
         self.yCoord = calculate_bubble_position(i, j)[1] + getProp('margin-top')
+
     def set_coord(self, xC, yC):
         self.xCoord, self.yCoord = xC, yC
     def is_clear(self):
@@ -45,7 +46,7 @@ class Gameboard:
         self.random_init(0.4, 0.3)
         self.bubbles_queue = [Bubble('active', self.colorSet, 0, 0) for _ in range(100)]  # Queue of bubbles for shooter
 
-    def find_cluster(self, start_i, start_j, color):
+    def find_cluster(self, start_i, start_j, color, outcol):
         """
         Find all bubbles connected to the (start_i, start_j) bubble of the same color.
         """
@@ -62,7 +63,7 @@ class Gameboard:
             # Ensure the bubble matches the color
             if 0 <= i < self.width and 0 <= j < self.height:
                 bubble = self.matrix[i][j]
-                if bubble.fillcolor == color and not bubble.is_clear():
+                if bubble.fillcolor == color and bubble.outline == outcol and not bubble.is_clear():
                     cluster.append((i, j))
 
                     # Add neighbors to the stack
@@ -96,7 +97,7 @@ class Gameboard:
         color = bubble.fillcolor
 
         # Find the connected cluster of the same color
-        cluster = self.find_cluster(i, j, color)
+        cluster = self.find_cluster(i, j, color, bubble.outline)
 
         # Remove the cluster if it meets the minimum size
         if len(cluster) >= 3:  # Adjust the minimum size as needed
